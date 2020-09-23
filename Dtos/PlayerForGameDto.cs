@@ -1,4 +1,4 @@
-namespace MindOfSpace_Api.Controllers.Dtos
+namespace MindOfSpace_Api.Dtos
 {
     public class PlayerForGameDto
     {

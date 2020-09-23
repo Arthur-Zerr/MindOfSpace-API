@@ -9,5 +9,6 @@ namespace MindOfSpace_Api.Models
         public int PlayerHostId { get; set; }
         public Player PlayerHost { get; set; }
         public List<Player> Players { get; set; }
+
     }
 }

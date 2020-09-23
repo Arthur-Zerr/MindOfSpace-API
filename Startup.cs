@@ -6,10 +6,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MindOfSpace_Api.BusinessLogic;
+using MindOfSpace_Api.DAL;
+using MindOfSpace_Api.Helpers;
 
 namespace MindOfSpace_Api
 {
@@ -22,21 +26,37 @@ namespace MindOfSpace_Api
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<MindOfSpaceContext>(x => x.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
             services.AddControllers();
             services.AddSwaggerGen();
+
+            services.AddScoped<LogUserActivity>();
+            services.AddScoped<MindOfSpaceRepository>();
+            services.AddScoped<HighscoreRepository>();
+            services.AddScoped<GameLogic>();
+            services.AddScoped<PlayerLogic>();
+            
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, MindOfSpaceContext mindOfSpaceContext)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
+            if (mindOfSpaceContext.Database.CanConnect())
+            {
+                mindOfSpaceContext.Database.Migrate();
+            }
+            else
+            {
+                mindOfSpaceContext.Database.Migrate();
+            }
+    
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseAuthorization();
@@ -46,7 +66,6 @@ namespace MindOfSpace_Api
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "MindOfSpace API");
             });
-
 
 
             app.UseEndpoints(endpoints =>
