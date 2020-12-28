@@ -25,7 +25,6 @@ namespace MindOfSpace_Api.DAL
         public async Task<List<Highscore>> GetHighscores(Player player)
         {
             var list = await mindOfSpaceContext.Highscores.Where(x => x.PlayerId == player.Id && x.IsDeleted != true).ToListAsync();
-            
             return list;
         }
 

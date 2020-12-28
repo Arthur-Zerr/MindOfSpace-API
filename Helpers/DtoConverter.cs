@@ -11,7 +11,7 @@ namespace MindOfSpace_Api.Helpers
             var tempDto = new PlayerForGameDto();
             tempDto.Id = player.Id;
             tempDto.Level = player.Level;
-            tempDto.Username = player.Username;
+            tempDto.Username = player.UserName;
 
             return tempDto;
         }
@@ -20,7 +20,7 @@ namespace MindOfSpace_Api.Helpers
         {
             var tempDto = new PlayerGameDto();
             tempDto.PlayerId = player.Id;
-            tempDto.GameId = game.Id;
+            tempDto.GameId = game.GameKey;
 
             return tempDto;
         }
@@ -29,10 +29,21 @@ namespace MindOfSpace_Api.Helpers
         {
             var tempDto = new PlayerDto();
             tempDto.Id = player.Id;
-            tempDto.lastActive = DateTimeOffset.Now; // TODO: Maybe Change to Better shit
-            tempDto.Username = player.Username;
+            tempDto.lastActive = DateTimeOffset.UtcNow; // TODO: Maybe Change to Better shit
+            tempDto.Username = player.UserName;
 
             return tempDto;
+        }
+
+        public static PlayerForReturnDto ToPlayerReturnDto(this Player player, TokenInformationDto tokenInformationDto)
+        {
+            var tempDto = new PlayerDto();
+            tempDto.Id = player.Id;
+            tempDto.lastActive = DateTimeOffset.UtcNow; // TODO: Maybe Change to Better shit
+            tempDto.Username = player.UserName;
+
+
+            return new PlayerForReturnDto{Player = tempDto, TokenInformation = tokenInformationDto};
         }
     }
 }

@@ -6,8 +6,8 @@ namespace MindOfSpace_Api.Models
     {
         public int Id { get; set; }
         public string Username { get; set; }
-        public int GameId { get; set; }
-        public DateTimeOffset? LoggedIn { get; set; }
-        public DateTimeOffset? LoggedOut { get; set; }
+        public string? GameId { get; set; }
+        public int ActivityType { get; set; }
+        public DateTimeOffset? Date { get; set; }
     }
 }

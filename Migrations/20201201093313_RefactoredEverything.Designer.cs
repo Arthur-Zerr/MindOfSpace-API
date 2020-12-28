@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MindOfSpace_Api.DAL;
 
 namespace MindOfSpace_Api.Migrations
 {
     [DbContext(typeof(MindOfSpaceContext))]
-    partial class MindOfSpaceContextModelSnapshot : ModelSnapshot
+    [Migration("20201201093313_RefactoredEverything")]
+    partial class RefactoredEverything
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -231,9 +233,6 @@ namespace MindOfSpace_Api.Migrations
                     b.Property<DateTimeOffset>("GameCreated")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("GameKey")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -286,8 +285,8 @@ namespace MindOfSpace_Api.Migrations
                     b.Property<DateTimeOffset?>("Date")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("GameId")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("GameId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Username")
                         .HasColumnType("nvarchar(max)");
@@ -304,11 +303,16 @@ namespace MindOfSpace_Api.Migrations
                     b.Property<DateTimeOffset>("Date")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int?>("GameId")
+                        .HasColumnType("int");
+
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<int>("Level")
                         .HasColumnType("int");
+
+                    b.HasIndex("GameId");
 
                     b.HasDiscriminator().HasValue("Player");
                 });
@@ -376,6 +380,13 @@ namespace MindOfSpace_Api.Migrations
                     b.HasOne("MindOfSpace_Api.Models.Player", "Player")
                         .WithMany("Highscores")
                         .HasForeignKey("PlayerId");
+                });
+
+            modelBuilder.Entity("MindOfSpace_Api.Models.Player", b =>
+                {
+                    b.HasOne("MindOfSpace_Api.Models.Game", null)
+                        .WithMany("Players")
+                        .HasForeignKey("GameId");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,31 +1,36 @@
+using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MindOfSpace_Api.BusinessLogic;
 using MindOfSpace_Api.DAL;
 using MindOfSpace_Api.Dtos;
 using MindOfSpace_Api.Helpers;
+using MindOfSpace_Api.Models;
 
 namespace MindOfSpace_Api.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
-    public class GameController  : ControllerBase
+    public class GameController : ControllerBase
     {
         private readonly LogUserActivity logUserActivity;
         private readonly MindOfSpaceRepository mindOfSpaceRepository;
-        private readonly GameLogic gameLogic;
+        private readonly PlayerRepository playerRepository;
+        private readonly LobbyHelper lobbyHelper;
 
-        public GameController(LogUserActivity logUserActivity, MindOfSpaceRepository mindOfSpaceRepository, GameLogic gameLogic)
+        public GameController(LogUserActivity logUserActivity, MindOfSpaceRepository mindOfSpaceRepository, PlayerRepository playerRepository, LobbyHelper lobbyHelper)
         {
+            this.playerRepository = playerRepository;
+            this.lobbyHelper = lobbyHelper;
             this.logUserActivity = logUserActivity;
             this.mindOfSpaceRepository = mindOfSpaceRepository;
-            this.gameLogic = gameLogic;
         }
-
 
         [HttpGet]
         [Route("IsOnline")]
-        public async Task<IActionResult> Get()
+        public IActionResult IsOnline()
         {
             return Ok("MindOfGame");
         }
@@ -33,14 +38,24 @@ namespace MindOfSpace_Api.Controllers
 
         [HttpPost]
         [Route("Create")]
-        public async Task<IActionResult> CreateGame([FromBody] int PlayerId)
+        public async Task<IActionResult> CreateGame([FromBody] PlayerForGameCreateDto player)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest();
 
-            var hostPlayer = await mindOfSpaceRepository.GetPlayerById(PlayerId);
-            
-            return Ok();
+            var hostPlayer = await playerRepository.GetPlayerById(player.PlayerId);
+
+            var gameid = lobbyHelper.CreateGame(hostPlayer);
+            var game = new Game();
+            game.GameKey = gameid;
+            game.GameCreated = DateTimeOffset.UtcNow;
+            game.PlayerHost = hostPlayer;
+
+            await mindOfSpaceRepository.AddGame(game); 
+
+            var gameLobby = lobbyHelper.GetGameDto(gameid);
+            await logUserActivity.GameLogin(hostPlayer, gameLobby);
+            return Ok(gameLobby);
         }
 
 
@@ -48,57 +63,86 @@ namespace MindOfSpace_Api.Controllers
         [Route("Join")]
         public async Task<IActionResult> JoinGame([FromBody] PlayerGameDto playerGame)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest();
 
-            var user = await mindOfSpaceRepository.GetPlayerById(playerGame.PlayerId);
-            var game = await mindOfSpaceRepository.GetGameById(playerGame.GameId);
+            var user = await playerRepository.GetPlayerById(playerGame.PlayerId);
+            var game = lobbyHelper.GetGameDto(playerGame.GameId);
 
-            await logUserActivity.LoginAsync(user, game);
+            if(user == null || game == null)
+                return BadRequest();
 
-            return Ok();
+            var response = lobbyHelper.AddPlayerToGame(game.Id, user);
+
+            if(response.Item1)
+            {
+                await logUserActivity.GameLogin(user, game);
+                return Ok(game);
+            }
+            return BadRequest();
+
         }
         [HttpPost]
         [Route("Leave")]
         public async Task<IActionResult> LeaveGame([FromBody] PlayerGameDto playerGame)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest();
 
-            var user = await mindOfSpaceRepository.GetPlayerById(playerGame.PlayerId);
-            var game = await mindOfSpaceRepository.GetGameById(playerGame.GameId);
+            //TODO Add Leave Game Function
+            var user = await playerRepository.GetPlayerById(playerGame.PlayerId);
+            var game = lobbyHelper.GetGameDto(playerGame.GameId);
 
-            if(game.PlayerHostId == user.Id)
-                if(!await mindOfSpaceRepository.DeleteGame(game.Id))
-                    return BadRequest();
+            var response = lobbyHelper.RemovePlayerFromGame(game.Id, user);
+            if(response.Item1)
+            {
+                var result = await logUserActivity.GameLogout(user, game);
 
-            var result = await logUserActivity.LogoutAsync(user, game);
-
-            if(result)
-                return Ok();
-
+                if (result)
+                    return Ok();
+            }
             return BadRequest();
+        }
+
+        [HttpGet]
+        [Route("Game/{gameId}")]
+        public async Task<IActionResult> GetGameUpdate(string gameId)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var game = lobbyHelper.GetGameDto(gameId);
+            if(game == null)
+                return BadRequest();
+
+            return Ok(game);
+            
         }
 
 
         [HttpGet]
-        [Route("Player/{GameId}")]
-        public async Task<IActionResult> AllPlayers(int GameId)
+        [Route("GamePlayers/{gameId}")]
+        public async Task<IActionResult> AllPlayers(string gameId)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest();
 
-            var playerList = await mindOfSpaceRepository.GetPlayersByGameId(GameId);
+            var playerList = lobbyHelper.PlayerListFromGame(gameId);
             return Ok(playerList);
         }
-
-
-
-        [HttpPost]
-        [Route("Player/{GameId}")]
-
-        public async Task<IActionResult> UpdatePlayerData([FromBody] PlayerForUpdate playerForUpdate)
+        [HttpGet]
+        [Route("GameExist/{gameId}")]
+        public IActionResult GameExist(string gameId)
         {
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var game = lobbyHelper.GetGameDto(gameId);
+            if(game == null)
+                return BadRequest();
+            if(game.GameState == Enums.GameState.Created)
+                return Ok();
+
             return BadRequest();
         }
     }

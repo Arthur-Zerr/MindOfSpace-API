@@ -1,9 +1,7 @@
 namespace MindOfSpace_Api.Dtos
 {
-    public class HighscoreDto
+    public class PlayerForGameCreateDto
     {
         public string PlayerId { get; set; }
-
-        public int HighScore { get; set; }
     }
 }

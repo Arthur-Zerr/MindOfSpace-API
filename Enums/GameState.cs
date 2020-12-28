@@ -4,6 +4,7 @@ namespace MindOfSpace_Api.Enums
     {
         Created,
         Started,
-        Ended
+        Ended,
+        Closed
     }
 }

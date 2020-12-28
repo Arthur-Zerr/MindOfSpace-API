@@ -1,8 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MindOfSpace_Api.Dtos
 {
     public class PlayerGameDto
     {
-        public int PlayerId { get; set; }
-        public int GameId { get; set; }
+        [Required]
+        public string PlayerId { get; set; }
+        
+        [Required]
+        public string GameId { get; set; }
     }
 }
