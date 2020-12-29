@@ -43,13 +43,12 @@ namespace MindOfSpace_Api.BusinessLogic
             var result = await userManager.CreateAsync(newPlayer, password);
             if(result.Succeeded)
             {
-                var roleResult = await userManager.AddToRoleAsync(player, "User");
+                var roleResult = await userManager.AddToRoleAsync(newPlayer, "User");
                 
-                var tempPlayer = await userManager.FindByNameAsync(newPlayer.UserName);
-                var tokenInfo = await tokenFactory.GenerateJwtTokenAsync(tempPlayer, userManager, configuration);
-                await logUserActivity.Register(tempPlayer);
+                var tokenInfo = await tokenFactory.GenerateJwtTokenAsync(newPlayer, userManager, configuration);
+                await logUserActivity.Register(newPlayer);
 
-                return tempPlayer.ToPlayerReturnDto(tokenInfo);
+                return newPlayer.ToPlayerReturnDto(tokenInfo);
             }
             
             return null;

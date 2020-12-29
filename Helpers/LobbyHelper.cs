@@ -23,6 +23,8 @@ namespace MindOfSpace_Api.Helpers
             var gameDto = new GameDto();
             gameDto.PlayerHost = hostPlayer.ToPlayerForGameDto();
             gameDto.Id = GenerateGameId();
+            gameDto.PlayerList = new List<PlayerForGameDto>();
+            gameDto.PlayerList.Add(hostPlayer.ToPlayerForGameDto());
 
             if(GameLobbys.TryAdd(gameDto.Id, gameDto))
                 return gameDto.Id;
@@ -75,6 +77,47 @@ namespace MindOfSpace_Api.Helpers
             }
             
             return new Tuple<bool, GameState>(false, GameState.Closed);    
+        }
+
+        public Tuple<bool, GameDto> UpdateGameState(string gameId, GameState gameState)
+        {
+            GameDto game;
+            GameDto originalGame;
+            if(!GameLobbys.TryGetValue(gameId, out game))
+                return new Tuple<bool, GameDto>(false, null);
+
+            originalGame = game;
+
+            if(game.GameState == gameState)
+                return new Tuple<bool, GameDto>(true, game);
+
+            game.GameState = gameState;
+            return new Tuple<bool, GameDto>(GameLobbys.TryUpdate(gameId, game, originalGame), game);
+        }
+
+        public Tuple<bool, GameDto> UpdatePlayerState(Player player, string gameId, PlayerState playerState)
+        {
+            GameDto game;
+            GameDto originalGame;
+            if(!GameLobbys.TryGetValue(gameId, out game))
+                return new Tuple<bool, GameDto>(false, null);
+
+            originalGame = game;
+            
+            if(game.PlayerHost.Username == player.UserName)
+            {
+                game.PlayerHost.PlayerState = playerState;
+                return new Tuple<bool, GameDto>(GameLobbys.TryUpdate(gameId, game, originalGame), game);
+            }
+
+            var user = game.PlayerList.Where(x => x.Username == player.UserName).FirstOrDefault();
+
+            if(user != null)
+            {
+                game.PlayerList.FirstOrDefault(x => x.Username == player.UserName).PlayerState = playerState;
+            }
+            
+            return new Tuple<bool, GameDto>(GameLobbys.TryUpdate(gameId, game, originalGame), game);
         }
 
         public List<PlayerForGameDto> PlayerListFromGame(string gameId)

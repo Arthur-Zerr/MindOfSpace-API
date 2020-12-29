@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using MindOfSpace_Api.BusinessLogic;
 using MindOfSpace_Api.DAL;
 using MindOfSpace_Api.Dtos;
+using MindOfSpace_Api.Enums;
 using MindOfSpace_Api.Helpers;
 using MindOfSpace_Api.Models;
 
@@ -88,8 +90,7 @@ namespace MindOfSpace_Api.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest();
-
-            //TODO Add Leave Game Function
+                
             var user = await playerRepository.GetPlayerById(playerGame.PlayerId);
             var game = lobbyHelper.GetGameDto(playerGame.GameId);
 
@@ -106,7 +107,7 @@ namespace MindOfSpace_Api.Controllers
 
         [HttpGet]
         [Route("Game/{gameId}")]
-        public async Task<IActionResult> GetGameUpdate(string gameId)
+        public IActionResult GetGameUpdate(string gameId)
         {
             if (!ModelState.IsValid)
                 return BadRequest();
@@ -119,10 +120,71 @@ namespace MindOfSpace_Api.Controllers
             
         }
 
+        [HttpPost]
+        [Route("UpdatePlayer")]
+        public async Task<IActionResult> UpdatePlayerState(PlayerForStateUpdateDto playerForStateUpdateDto)
+        {
+            if(!ModelState.IsValid)
+                return BadRequest();
+
+            var user = await playerRepository.GetPlayerById(playerForStateUpdateDto.PlayerId);
+            var game = lobbyHelper.GetGameDto(playerForStateUpdateDto.GameId);
+
+            if(user == null || game == null)
+                return BadRequest();
+            
+            PlayerState playerState = PlayerState.Living;
+            Enum.TryParse<PlayerState>(playerForStateUpdateDto.PlayerState, out playerState);
+
+            var response = lobbyHelper.UpdatePlayerState(user, game.Id, playerState);
+            if(response.Item1)
+            {
+                game = lobbyHelper.GetGameDto(game.Id);
+                var playersToEndGame = (int)Math.Round((decimal)(game.PlayerAmount / 3));
+                var endedPlayers = game.PlayerList.Where(x => x.PlayerState != PlayerState.Living).ToList();
+                if(endedPlayers.Count >= playersToEndGame)lobbyHelper.UpdateGameState(game.Id, GameState.Ended);
+                return Ok();
+            }
+
+            return BadRequest();
+        }
+
+        [HttpGet]
+        [Route("GameState/{gameId}")]
+        public IActionResult GetCurrentGameState(string gameId)
+        {
+            if(!ModelState.IsValid)
+                return BadRequest();
+            
+            var game = lobbyHelper.GetGameDto(gameId);
+            if(game == null)
+                return BadRequest();
+
+            return Ok(new GameStateDto {GameState = (int)game.GameState});
+        }
+
+        [HttpPost]
+        [Route("StartGame")]
+        public IActionResult StartGame(GameInformationDto gameInformationDto)
+        {
+            if(!ModelState.IsValid)
+                return BadRequest();
+
+            var game = lobbyHelper.GetGameDto(gameInformationDto.GameId);
+            if(game == null)
+                return BadRequest();
+
+            var response = lobbyHelper.UpdateGameState(gameInformationDto.GameId, Enums.GameState.Started);
+            if(response.Item1)
+                return Ok(response.Item2);
+
+            return BadRequest();
+        }
+
 
         [HttpGet]
         [Route("GamePlayers/{gameId}")]
-        public async Task<IActionResult> AllPlayers(string gameId)
+        public IActionResult AllPlayers(string gameId)
         {
             if (!ModelState.IsValid)
                 return BadRequest();
@@ -130,6 +192,7 @@ namespace MindOfSpace_Api.Controllers
             var playerList = lobbyHelper.PlayerListFromGame(gameId);
             return Ok(playerList);
         }
+
         [HttpGet]
         [Route("GameExist/{gameId}")]
         public IActionResult GameExist(string gameId)
